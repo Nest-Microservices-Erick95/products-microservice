@@ -14,6 +14,7 @@ import { ProductsModule } from './products/products.module';
 //usando el archivo de dev.db generado por prisma para nuestra base de datos de sqlite como se explicó arriba podremos abrir esa base de datos para ver las tablas y asi usando TablePlus por ejemplo
 
 //en este proyecto se puso en la raiz del proyecto: npm i --save @nestjs/microservices , esto para poder configurar nuestro proyecto para ser un microservicio con comunicacion con otros microservicios mediante tcp, esto se configuró en el main.ts, y tambien se configuraron los endpoints que tenemos en el products.controller.ts para que en lugar de tratarse de una api rest que se traten esos endpoints como de un microservicios con el cual otros microservicios se pueden comunicar
+//En este curso se vio cómo subir a github los repositorios de nuestros microsercicios pero para tener todos nuestros microservicios agrupados en un solo lugar y no que cada microservicio este por separado y asi, para eso usamos Github organizations, checarlo en este video del curso: https://cursos.devtalles.com/courses/take/nestjs-microservicios/lessons/53294801-github-organizations-agrupar-repositorios
 
 @Module({
   imports: [ProductsModule],
