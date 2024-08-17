@@ -13,13 +13,13 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-model Product { //para la tabla de product
+model Product {
   id Int @id @default(autoincrement())
   name String
   price Float
   available Boolean @default(true)
-  createdAt DateTime @default(now()) //cuando se cree que ponga la fecha actual automaticamente
-  updateAt DateTime @updatedAt //cuando se actualice que ponga la fecha actual automaticamente
+  createdAt DateTime @default(now()) 
+  updateAt DateTime @updatedAt 
 
-  @@index([available]) //esto permite hacer busquedas en la tabla product por el campo available mucho mas rapido que si no pusieramos esto, ya que asi en las consultas en lugar de checar cada campo individualmente en busqueda del available (si hacemos una consulta en donde el where tenga lo del available) simplemente irá a este indice y ya, siendo las consultas con el where con el available mucho mas rapido, solo es para optimizarlo pero igual sin esto funcionaría, esto lo hicimos porque habrá muchas consultas que tenga su where incluyendo el campo avaliable, asi que cuando se nos presenten casos asi es mejor crear un indice de esta forma para ese campo que usaremos mucho en nuestras consultas para que asi nuestras consultas sean mas rapidas
+  @@index([available]) 
 }

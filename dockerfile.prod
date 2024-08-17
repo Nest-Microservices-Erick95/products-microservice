@@ -1,0 +1,58 @@
+#para entender cosas de esto ver el curso de spring con docker y kubernetes, ahi se ve docker y kubernetes a profundidad
+
+#dependencias, solo generar la carpeta de node_modules
+FROM node:18.20.4-alpine3.20 as deps
+
+WORKDIR /usr/src/app
+
+COPY package.json .
+COPY package-lock.json .
+
+RUN npm install
+
+#---------------------------------------------------------------------------
+
+#builder, construye la aplicacion
+FROM node:18.20.4-alpine3.20 as build
+
+WORKDIR /usr/src/app
+
+#copiar desde deps los modulos de node
+COPY --from=deps /usr/src/app/node_modules ./node_modules
+
+COPY . .
+
+#OJO que en este punto en el dockerfile.prod del proyecto de orders-ms se puso: RUN npx prisma migrate deploy para hacer la migracion en produccion pero eso es si tenemos ya en este punto la base de datos pero su url ya en la nube pues, pero para el products-ms no tenemos la base de datos en la nube sino en memoria con sqlite y las tablas y todo de la base de datos de sqlite está dentro de la carpeta de prisma la cual se copia en el contenedor en la parte de abajo de la seccion de prod, por eso aqui no se pone eso de las migraciones cuando es en produccion, aunque pues en produccion lo normal es que tengamos la base de datos en la nube para todos los microservicios, no que usemos sqlite que eso es en memoria y solo para desarrollo, pero pues asi se hizo aqui en el products-ms en este curso, pero en la realidad haremos las cosas como en el orders-ms de poner una base de datos en la nube y usarla que en el orders-ms usamos Neon que es una pagina de postgres en la nube que tambien usamos en el curso 2 de nodejs
+
+#genera el cliente de prisma y lo almacena en el node_modules, los cuales se copian a la parte final de abajo con la carpeta node_modules, y esto se debe hacer antes de crear la carpeta de dist con el npm run build de abajo
+RUN npx prisma generate
+
+#crear la carpeta dist donde se tiene el codigo de produccion
+RUN npm run build
+
+#para dejar solo las dependencias de produccion, aunque esto es opcional pero disminuye el peso de la imagen
+RUN npm ci -f --only=production && npm cache clean --force
+
+#---------------------------------------------------------------------------
+
+#crear la imagen final
+FROM node:18.20.4-alpine3.20 as prod
+
+WORKDIR /usr/src/app
+
+#copiar la carpeta de node_modules ya que es necesaria para ejecutar el codigo de produccion de la carpeta dist
+COPY --from=build /usr/src/app/node_modules ./node_modules
+
+COPY --from=build /usr/src/app/dist ./dist
+
+#lo de la siguiente linea es porque en el caso de este proyecto de products-ms se tiene la base de datos en memoria con sqlite, y asi la base de datos está en la carpetade prisma del proyecto, por eso para este caso debemos copiar la carpeta de prisma y tenerla en el contenedor porque ahí es donde está la base de datos
+COPY --from=build /usr/src/app/prisma ./prisma
+
+#la siguiente variable de entorno es opcional pero pues indica que estamos en produccion, se suele poner en produccion
+ENV NODE_ENV=production
+
+#OJO que en este punto en los demas dockerfile.prod de los demas proyectos comoel orders-ms, payments-ms, etc se puso USER node , eso se puso aqui pero cuando usamos la base de datos de sqlite, la cual es en memoria y pues no se recomienda usarla en produccion mas que solo en desarrollo pero igual nosotros la usamos en este proyecto de products-ms para ver cómo se usa con prisma, pero cuando usamos sqlite debemos tener el usuario root de la imagen del FROM de arriba de nodejs, no otro usuario porque como explicamos en los dockerfile.prod de los demas proyectos, otro usuario que no sea el root (el cual está por default) no podría realizar operaciones de escritura como eliminar cosas, crearlas y asi, pero el root si, y eso aplica para la base de datos de sqlite que está en memoria, si tenemos la base de datos en la nube o en otro contenedor no tendríamos problema con otro user que no sea el root, pero para la base de datos de sqlite si tenemos otro user que no sea el root entonces no podremos crear, eliminar o actualizar, solo podremos obtener registros, osea realizar operaciones de GET o select pues porque solo podremos realizar operaciones de lectura y no de escritura, esto lo probé y asi es, entonces para el sqlite debemos usar el user de root que viene por default, no poner eso de USER node como lo hicimos en los dockerfile.prod de los demas proyectos porque asi estaríamos en ese user de node que no es el root y tendríamos ese problema que mencioné, eso solo aplica para la base de datos sqlite
+
+EXPOSE 3000
+
+CMD ["node", "dist/main.js"]

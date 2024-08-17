@@ -7,7 +7,7 @@ export class CreateProductDto {
     public name: string;
 
     @IsNumber({
-        maxDecimalPlaces: 4 //para que acepte maximo 4 decimales en su numero
+        maxDecimalPlaces: 4 
     })
     @Min(0)
     @Type(() => Number)
